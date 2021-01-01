@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        function randomIncrement() {
+            return Math.floor((Math.random()*3)+1);
+        }
+
+        $(function(){
+            var iosocket = io.connect();
+ 
+            iosocket.on('connect', function () {
+                $('#logger').append($('<li class="event">Connected</li>'));
+ 
+                iosocket.on('disconnect', function() {
+                    $('#logger').append('<li class="event">Disconnected</li>');
+                });
+
+                iosocket.on('playerjoined', function(player) {
+                    $('#activePlayers').append($('<li></li>').text(player.id));
+                    $('#logger').append($('<li class="event"></li>').text('player ' + player.id + ' joined the game'));
+                });
+
+                iosocket.on('playersaid', function(player) {
+                    $('#logger').append($('<li class="chat"></li>').text(player.id + ': ' + player.caption));
+                });
+
+                iosocket.on('playermoved', function(player) {
+                    $('#logger').append($('<li class="move"></li>').text('player ' + player.id + ' moved x: ' + player.x + '  y: ' + player.y));
+                });
+
+                iosocket.on('playerquit', function(player) {
+                    $.find('#activePlayers li:contains(' + player.id + ')')[0].remove()
+                    $('#logger').append($('<li class="event"></li>').text('player ' + player.id + ' quit the game'));
+                });
+
+            });
+ 
+            $('#outgoingChatMessage').keypress(function(event) {
+                if(event.which == 13) {
+                    event.preventDefault();
+
+                    var player = {
+                        id: jQuery.browser.version,
+                        caption: $('#outgoingChatMessage').val()
+                    };
+
+                    iosocket.emit('speak', player);
+                    $('#logger').append($('<li class="chat"></li>').text($('#outgoingChatMessage').val()));
+                    $('#outgoingChatMessage').val('');
+                }
+            });
+
+            $('#moveForm').submit(function (event) {
+                event.preventDefault();
+
+                var player = {
+                    id: jQuery.browser.version,
+                    x: parseFloat($('#x').val()),
+                    y: parseFloat($('#y').val()),
+                    direction: 'RIGHT'
+                };
+
+                iosocket.emit('move', player);
+                $('#logger').append($('<li class="move"></li>').text('I ' + player.id + ' move  x: ' + player.x + '  y: ' + player.y));
+                $('#x').val(parseInt(player.x) + randomIncrement());
+                $('#y').val(parseInt(player.y) + randomIncrement());
+            });
+
+            $("#join").click(function () {
+                $('#logger').html('');
+                $('#activePlayers').html('');
+                $('#activePlayers').append($('<li></li>').text(jQuery.browser.version));
+                
+                var player = {
+                    id: jQuery.browser.version,
+                    imageSheet: 'summoner_f.png'
+                };
+
+                iosocket.emit('join', player);
+            });
+
+            $("#quit").click(function () {
+                var player = {
+                    id: jQuery.browser.version
+                };
+
+                iosocket.emit('quit', player);
+            });
+        });
+
+        setInterval(function(e) {
+           $("#logger").animate({ scrollTop: $('#logger').prop('scrollHeight')}, 1000);
+        }, 2000);
+
+    </script>
+    <style type="text/css">
+        th {
+            background: #25649F;    
+            font-size: 16px;
+            letter-spacing: 0;
+            padding: 8px 10px;
+            margin: -10px -10px 0;
+            color: #fff;
+            text-shadow: 0 1px 0 #444;
+            font-weight: 700;
+            font-family: "klavika-web", "Helvetica Neue", Helvetica, Arial, Geneva, sans-serif !important;
+        }
+        ul {
+            background-color: black;
+            color: white;
+            font-family: Tahoma;
+            font-size: 11px;
+            list-style-type: none;
+        }
+        #logger {
+            display: block;
+            height: 500px;
+            overflow-y: scroll;
+        }
+        .chat { color: lightblue; }
+        .event { color: gold; font-weight: bold; }
+        .move { color: grey; }
+    </style>
+</head>
+<body>
+
+<table border="1" width="100%">
+    <tr><th>Chat</th><th>Movement</th><th>Other</th><th>Players</th></tr>
+    <tr valign="top">
+    <td>
+        <label for="outgoingChatMessage">Enter chat message and press enter to post</label><br/>
+        <input type="text" id="outgoingChatMessage" size="20">
+    </td>
+    <td>
+        <form action"move.html" id="moveForm" name="" method="get" >
+        X: <input type="text" id="x" value="0" size="4"><br/>
+        Y: <input type="text" id="y" value="0" size="4"><br/>
+        <input type="submit" value="Move">
+        </form>
+    </td>
+    <td>
+        <input type="button" value="Join" id="join"> <br/>
+        <input type="button" value="Quit" id="quit"> <br/>
+    </td>
+    <td>
+        <ul id="activePlayers"></ul>
+    </td>
+    <tr><th colspan="4">Console</th></tr>
+    <tr>
+        <td colspan="4" bgcolor="black">
+            <ul id="logger"></ul>
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

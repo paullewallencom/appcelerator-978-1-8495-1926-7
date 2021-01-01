@@ -1,0 +1,10 @@
+.DS_Store
+build
+build.log
+tmp
+._*
+.DS_Store
+.settings
+.metadata
+Thumbs.db
+.fastdev.lock
